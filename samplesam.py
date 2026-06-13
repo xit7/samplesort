@@ -2,6 +2,7 @@
 """samplesam — sort WAV files into folders by dominant frequency."""
 
 import argparse
+import math
 import shutil
 import sys
 from pathlib import Path
@@ -24,7 +25,7 @@ PREFIXES = {name: prefix for name, _, prefix, *_ in BANDS}
 
 MIXED_FOLDER    = "5-mixed"
 MIXED_PREFIX    = "5_"
-MIXED_THRESHOLD = 0.50   # top band must hold >= 50% of total energy or -> mixed
+MIXED_THRESHOLD = 0.33   # winner must hold >= 33% of log-normalised energy or -> mixed
 
 
 def collect_wavs(input_dir: Path) -> list[Path]:
@@ -44,10 +45,19 @@ def dominant_band(path: Path) -> tuple[str, dict[str, float]]:
         energies[name] = float(power[mask].sum())
 
     total = sum(energies.values()) or 1.0
-    winner = max(energies, key=energies.__getitem__)
     pcts = {k: v / total * 100 for k, v in energies.items()}
 
-    if pcts[winner] < MIXED_THRESHOLD * 100:
+    # Divide by octave bandwidth to remove linear-bin-count bias before picking winner.
+    log_normed = {
+        name: energies[name] / math.log2(hi / lo)
+        for name, _, _, lo, hi in BANDS
+    }
+    normed_total = sum(log_normed.values()) or 1.0
+    normed_pcts = {k: v / normed_total for k, v in log_normed.items()}
+
+    winner = max(normed_pcts, key=normed_pcts.__getitem__)
+
+    if normed_pcts[winner] < MIXED_THRESHOLD:
         return "mixed", pcts
     return winner, pcts
 
@@ -144,9 +154,10 @@ def main() -> None:
     print(f"\n{'─' * 60}")
     print(f"Processed: {total} file(s)  |  Errors: {len(errors)}")
     all_keys = [name for name, *_ in BANDS] + ["mixed"]
+    max_count = max(counts.values()) or 1
     for key in all_keys:
         if counts[key]:
-            bar = "█" * counts[key]
+            bar = "█" * round(counts[key] / max_count * 40)
             print(f"  {key:<8}  {counts[key]:>4}  {bar}")
     print(f"\nOutput: {output_dir}\n")
 
