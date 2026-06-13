@@ -33,14 +33,30 @@ Requires Python 3.10+.
 ## Usage
 
 ```bash
-samplesam <input_folder> <output_folder>
+samplesam <input_folder> <output_folder> [--sort-per-import]
 
 # Examples:
 samplesam ~/samples ~/sorted
-samplesam /Volumes/Drive/Kicks ~/sorted/kicks
+samplesam ~/samples ~/sorted --sort-per-import
+samplesam ~/samples ~/sorted -s
 ```
 
 Running `samplesam` with no arguments prints a usage hint. You can also call the Python file directly: `python samplesam.py <input> <output>`.
+
+## Incremental imports (`--sort-per-import` / `-s`)
+
+When this flag is set, each import session gets a **run counter** that decrements with every run (999, 998, …), and each file within a run gets a **position counter** (000 = newest). Together they form a prefix that keeps newer imports sorted before older ones in any file browser — without renaming existing files.
+
+```text
+999-000-1_kick.wav     ← first import, newest file in that run
+999-001-1_bass.wav
+998-000-1_hihat.wav    ← second import, sorts before first run
+998-001-1_snare.wav
+```
+
+A `samplesam-state.json` file is written to the output folder. It records a content fingerprint (SHA-256 of size + first 8 KB) for every imported file. On subsequent runs, already-imported files are recognised by fingerprint and skipped — only new files are analysed and copied.
+
+Supports up to **1000 import sessions** per output folder. After that, start a fresh output folder.
 
 ## Behaviour
 

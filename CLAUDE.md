@@ -30,6 +30,14 @@ python samplesam.py                      # interactive prompts
 
 Each output file is prefixed with its band number: `kick.wav` → `1_kick.wav`. Duplicate filenames are auto-renamed: `1_kick_2.wav`, `1_kick_3.wav`, etc.
 
+With `--sort-per-import` / `-s`, filenames additionally get a two-part counter prefix so new imports always sort first:
+
+```text
+<run_id:03d>-<position:03d>-<band_prefix><original_name>
+```
+
+`run_id` counts down from 999 (newer import = lower number = sorts first). `position` counts up within a run (000 = newest file in that batch). A `samplesam-state.json` file in the output folder tracks imported file fingerprints (SHA-256 of size + first 8 KB) so already-processed files are skipped on re-runs. Supports up to 1000 import sessions; exits with a clear error if exhausted.
+
 ## Classification algorithm
 
 `dominant_band()` in `samplesam.py`:
@@ -54,6 +62,8 @@ Spectral centroid was tried and rejected — brief transients skew it badly (a h
 | `MIXED_FOLDER`    | string | `"5-mixed"`                                        |
 | `MIXED_PREFIX`    | string | `"5_"`                                             |
 | `MIXED_THRESHOLD` | float  | `0.33` — minimum octave-normalised share to win    |
+| `STATE_FILE`      | string | `"samplesam-state.json"` — DB filename in output   |
+| `MAX_RUN_ID`      | int    | `999` — first run_id; supports 1000 sessions       |
 
 To change the mixed threshold or add/rename bands, edit only `BANDS` and the three `MIXED_*` constants at the top of the file.
 
