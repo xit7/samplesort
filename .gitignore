@@ -432,3 +432,4 @@ FodyWeavers.xsd
 **/input/
 **/output/
 **/wrong/
+.DS_Store
