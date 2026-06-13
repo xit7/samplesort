@@ -24,24 +24,23 @@ The tool computes a full **STFT power spectrogram** for each file and sums the e
 ## Setup
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt   # install Python dependencies (librosa, numpy)
+chmod +x samplesam                # make the wrapper executable (one-time)
 ```
 
-Requires Python 3.10+ and the packages in `requirements.txt` (`librosa`, `numpy`).
+Requires Python 3.10+.
 
 ## Usage
 
 ```bash
-# Guided — prompts for both paths:
-python samplesam.py
-
-# With arguments:
-python samplesam.py <input_folder> <output_folder>
+samplesam <input_folder> <output_folder>
 
 # Examples:
-python samplesam.py ~/samples ~/sorted
-python samplesam.py /Volumes/Drive/Kicks ~/sorted/kicks
+samplesam ~/samples ~/sorted
+samplesam /Volumes/Drive/Kicks ~/sorted/kicks
 ```
+
+Running `samplesam` with no arguments prints a usage hint. You can also call the Python file directly: `python samplesam.py <input> <output>`.
 
 ## Behaviour
 

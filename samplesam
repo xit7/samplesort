@@ -1,0 +1,3 @@
+#!/bin/sh
+# Wrapper so the tool can be called as `samplesam` instead of `python samplesam.py`
+exec python3 "$(dirname "$0")/samplesam.py" "$@"
