@@ -17,17 +17,16 @@ import numpy as np
 BANDS = [
     ("sub",     "0-sub",     "0_",  20,     80),
     ("low",     "1-low",     "1_",  80,    250),
-    ("lowmid",  "2-lowmid",  "2_", 250,   1000),  # split from the old 4-octave 'mid'
-    ("mid",     "3-mid",     "3_", 1000,  4000),  # so neither half is a catch-all
-    ("highmid", "4-highmid", "4_", 4000,  6000),
-    ("high",    "5-high",    "5_", 6000, 20000),
+    ("mid",     "2-mid",     "2_", 250,   2000),  # body/warmth/voice; tops out ~2 kHz
+    ("highmid", "3-highmid", "3_", 2000,  6000),  # presence/bite/noise/hi-hats start here
+    ("high",    "4-high",    "4_", 6000, 20000),
 ]
 
 FOLDERS  = {name: folder for name, folder, *_ in BANDS}    # key -> output subfolder name
 PREFIXES = {name: prefix for name, _, prefix, *_ in BANDS}  # key -> filename prefix
 
-MIXED_FOLDER    = "6-mixed"
-MIXED_PREFIX    = "6_"
+MIXED_FOLDER    = "5-mixed"
+MIXED_PREFIX    = "5_"
 # A band wins only if it holds >= 33% of the A-weighted energy share.
 # Below that the sound is spread across the spectrum (loops, pads) -> mixed.
 # 0.33 keeps mixed small (~4%) while still catching genuinely broadband material.

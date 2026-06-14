@@ -22,11 +22,10 @@ python samplesam.py                      # interactive prompts
 <output>/
   0-sub/       20 – 80 Hz       sub bass, rumble
   1-low/       80 – 250 Hz      bass, kick body
-  2-lowmid/    250 – 1 000 Hz   low body, toms, warmth
-  3-mid/       1 000 – 4 000 Hz vocals, snare body, presence
-  4-highmid/   4 – 6 kHz        bite, hi-hats, sibilance
-  5-high/      6 – 20 kHz       air, cymbals, shakers
-  6-mixed/     —                no single dominant band (top band < 33% of A-weighted energy)
+  2-mid/       250 – 2 000 Hz   body, warmth, voice, snare/tom tone
+  3-highmid/   2 – 6 kHz        presence, bite, noise, hi-hats
+  4-high/      6 – 20 kHz       air, cymbals, shakers
+  5-mixed/     —                no single dominant band (top band < 33% of A-weighted energy)
 ```
 
 Each output file is prefixed with its band number: `kick.wav` → `1_kick.wav`. Duplicate filenames are auto-renamed: `1_kick_2.wav`, `1_kick_3.wav`, etc.
@@ -49,7 +48,7 @@ With `--sort-per-import` / `-s`, filenames additionally get a two-part counter p
 4. **Apply A-weighting** (`a_weighting_power(freqs)`, the IEC 61672 loudness curve) to the power spectrum — this is the core of the design (see below)
 5. Sum the A-weighted power in each of the 6 frequency bands across all time frames
 6. The band holding the largest **share** of total A-weighted energy wins
-7. If the winner holds < 33 % → `6-mixed` (sound is spread across the spectrum; loops/pads)
+7. If the winner holds < 33 % → `5-mixed` (sound is spread across the spectrum; loops/pads)
 
 **Why A-weighting (the key decision):** the old algorithm summed raw STFT power, but bass carries far more acoustic power than treble for equal *perceived* loudness (Fletcher–Munson). A snare's ~150 Hz body out-powered its bright 7 kHz crack and landed in `low`, contradicting what the ear hears. A-weighting (−30 dB @ 50 Hz, −14 dB @ 150 Hz, ≈flat 1–6 kHz) rebalances the spectrum to match hearing. A real kick still lands low — A-weighting only rebalances competing bands, it can't invent treble.
 
@@ -57,17 +56,17 @@ With `--sort-per-import` / `-s`, filenames additionally get a two-part counter p
 - *Spectral centroid* — brief transients skew it, and after A-weighting it pushes kicks/bass up into `mid` (fundamentals get suppressed). ~67/78 kicks misfiled in testing.
 - *Octave-width normalisation* (`energy / log2(hi/lo)`) — over-rewards narrow bands; a kick's faint click won the narrow `highmid` band. Removed entirely.
 
-The wide 4-octave `mid` (old 250–4000 Hz) was split at 1 kHz into `lowmid` + `mid` so neither half becomes a 50%+ catch-all.
+**Band boundaries are perceptual, set by ear against the `wrong/` regression folders.** The mid→highmid line sits at **2 kHz** (classic midrange ceiling), so presence/bite/noise/hi-hats land in `highmid`. An earlier `lowmid`/`mid` split at 1 kHz was reverted — the user heard no distinction between those two bands; the perceptually meaningful split is mid vs highmid at 2 kHz.
 
 ## Key constants (`samplesam.py`)
 
 | Symbol            | Value  | Purpose                                            |
 |-------------------|--------|----------------------------------------------------|
-| `BANDS`           | list   | Defines all 6 bands: key, folder, prefix, lo/hi Hz |
+| `BANDS`           | list   | Defines all 5 bands: key, folder, prefix, lo/hi Hz |
 | `FOLDERS`         | dict   | `band_key → output folder name`                    |
 | `PREFIXES`        | dict   | `band_key → filename prefix`                       |
-| `MIXED_FOLDER`    | string | `"6-mixed"`                                        |
-| `MIXED_PREFIX`    | string | `"6_"`                                             |
+| `MIXED_FOLDER`    | string | `"5-mixed"`                                        |
+| `MIXED_PREFIX`    | string | `"5_"`                                             |
 | `MIXED_THRESHOLD` | float  | `0.33` — minimum A-weighted energy share to win    |
 | `STATE_FILE`      | string | `"samplesam-state.json"` — DB filename in output   |
 | `MAX_RUN_ID`      | int    | `999` — first run_id; supports 1000 sessions       |

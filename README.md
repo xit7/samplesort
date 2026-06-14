@@ -8,15 +8,14 @@ Sort WAV samples into folders by their dominant frequency band.
 |--------------|-------------------|------------------------------------------|
 | `0-sub/`     | 20 – 80 Hz        | sub bass, rumble                         |
 | `1-low/`     | 80 – 250 Hz       | bass, kick body                          |
-| `2-lowmid/`  | 250 – 1 000 Hz    | low body, toms, warmth                   |
-| `3-mid/`     | 1 000 – 4 000 Hz  | vocals, snare body, presence             |
-| `4-highmid/` | 4 000 – 6 000 Hz  | bite, hi-hats, sibilance                 |
-| `5-high/`    | 6 000 – 20 000 Hz | air, cymbals, shakers                    |
-| `6-mixed/`   | —                 | broad-spectrum / no single dominant band |
+| `2-mid/`     | 250 – 2 000 Hz    | body, warmth, voice, snare/tom tone      |
+| `3-highmid/` | 2 000 – 6 000 Hz  | presence, bite, noise, hi-hats           |
+| `4-high/`    | 6 000 – 20 000 Hz | air, cymbals, shakers                    |
+| `5-mixed/`   | —                 | broad-spectrum / no single dominant band |
 
 Each copied file is prefixed with its band number: `kick.wav` → `1_kick.wav`.
 
-A file lands in `6-mixed` when no single band holds ≥ 33 % of the file's (loudness-weighted) energy — typical for loops, pads, and full-frequency phrases.
+A file lands in `5-mixed` when no single band holds ≥ 33 % of the file's (loudness-weighted) energy — typical for loops, pads, and full-frequency phrases.
 
 ## How classification works
 
