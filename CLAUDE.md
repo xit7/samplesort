@@ -46,7 +46,7 @@ With `--sort-per-import` / `-s`, filenames additionally get a two-part counter p
 2. Cap `n_fft` to signal length so very short files don't trigger a librosa warning
 3. Compute STFT power spectrogram: `np.abs(librosa.stft(y, n_fft)) ** 2`
 4. **Apply A-weighting** (`a_weighting_power(freqs)`, the IEC 61672 loudness curve) to the power spectrum — this is the core of the design (see below)
-5. Sum the A-weighted power in each of the 6 frequency bands across all time frames
+5. Sum the A-weighted power in each of the 5 frequency bands across all time frames
 6. The band holding the largest **share** of total A-weighted energy wins
 7. If the winner holds < 33 % → `5-mixed` (sound is spread across the spectrum; loops/pads)
 
