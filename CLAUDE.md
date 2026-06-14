@@ -2,7 +2,7 @@
 
 ## What this project is
 
-`samplesam` is a single-file macOS CLI tool that recursively scans a folder for `.wav` files, classifies each by dominant frequency band, and copies them into numbered output sub-folders. The input folder is never modified.
+`samplesam` is a single-file CLI tool (macOS/Linux; Windows via `python samplesam.py`) that recursively scans a folder for `.wav` files, classifies each by dominant frequency band, and copies them into numbered output sub-folders. The input folder is never modified.
 
 ## Single file
 

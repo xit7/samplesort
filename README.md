@@ -25,27 +25,42 @@ To match your ears, the tool applies **A-weighting** — the same loudness curve
 
 A real kick still lands in `0-sub`/`1-low`: A-weighting only rebalances bands that actually compete — it can't invent treble that isn't there.
 
-## Setup
+## Installation
+
+Requires **Python 3.10+**. Works on macOS and Linux; on Windows, run it via `python samplesam.py` (the `./samplesam` launcher is a Unix shell script).
 
 ```bash
-pip install -r requirements.txt   # install Python dependencies (librosa, numpy)
-chmod +x samplesam                # make the wrapper executable (one-time)
+# 1. Get the code
+git clone <repo-url> samplesort
+cd samplesort
+
+# 2. Create and activate a virtual environment (recommended — librosa pulls in numpy/scipy)
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 3. Install dependencies (librosa, numpy)
+pip install -r requirements.txt
+
+# 4. Make the launcher executable (one-time)
+chmod +x samplesam
 ```
 
-Requires Python 3.10+.
+Then run `./samplesam` (see Usage below). If you skip the virtual environment, `pip install -r requirements.txt` installs the dependencies globally instead — the tool works either way.
 
 ## Usage
 
+Run the launcher from the repo folder (or add it to your `PATH` to call `samplesam` from anywhere):
+
 ```bash
-samplesam <input_folder> <output_folder> [--sort-per-import]
+./samplesam <input_folder> <output_folder> [--sort-per-import]
 
 # Examples:
-samplesam ~/samples ~/sorted
-samplesam ~/samples ~/sorted --sort-per-import
-samplesam ~/samples ~/sorted -s
+./samplesam ~/samples ~/sorted
+./samplesam ~/samples ~/sorted --sort-per-import
+./samplesam ~/samples ~/sorted -s
 ```
 
-Running `samplesam` with no arguments prints a usage hint. You can also call the Python file directly: `python samplesam.py <input> <output>`.
+Running `./samplesam` with no arguments prints a usage hint. You can also call the Python file directly: `python samplesam.py <input> <output>`.
 
 ## Incremental imports (`--sort-per-import` / `-s`)
 
