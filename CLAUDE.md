@@ -20,12 +20,13 @@ python samplesam.py                      # interactive prompts
 
 ```
 <output>/
-  0-sub/       20 – 80 Hz      sub bass, rumble
-  1-low/       80 – 250 Hz     bass, kick body
-  2-mid/       250 – 4 000 Hz  vocals, guitar, snare
-  3-highmid/   4 – 8 kHz       bite, presence
-  4-high/      8 – 20 kHz      air, cymbals
-  5-mixed/     —               no single dominant band (top band < 33% of octave-normalised energy)
+  0-sub/       20 – 80 Hz       sub bass, rumble
+  1-low/       80 – 250 Hz      bass, kick body
+  2-lowmid/    250 – 1 000 Hz   low body, toms, warmth
+  3-mid/       1 000 – 4 000 Hz vocals, snare body, presence
+  4-highmid/   4 – 6 kHz        bite, hi-hats, sibilance
+  5-high/      6 – 20 kHz       air, cymbals, shakers
+  6-mixed/     —                no single dominant band (top band < 33% of A-weighted energy)
 ```
 
 Each output file is prefixed with its band number: `kick.wav` → `1_kick.wav`. Duplicate filenames are auto-renamed: `1_kick_2.wav`, `1_kick_3.wav`, etc.
@@ -45,23 +46,29 @@ With `--sort-per-import` / `-s`, filenames additionally get a two-part counter p
 1. Load audio as mono with `librosa.load(..., sr=None)` — preserve original sample rate
 2. Cap `n_fft` to signal length so very short files don't trigger a librosa warning
 3. Compute STFT power spectrogram: `np.abs(librosa.stft(y, n_fft)) ** 2`
-4. Sum power in each of the 5 frequency bands across all time frames
-5. Normalise each band's energy by its octave width `log2(hi/lo)` — this removes the bias where wider linear bands (e.g. `high` = 12 000 Hz) accumulate more STFT bins and more raw energy than narrow ones (e.g. `highmid` = 4 000 Hz)
-6. The band with the highest octave-normalised energy wins
-7. If the winner holds < 33 % of normalised energy → `5-mixed` (33 % sits just above the ~32 % a flat broadband signal scores, so real instrument characters always clear the bar)
+4. **Apply A-weighting** (`a_weighting_power(freqs)`, the IEC 61672 loudness curve) to the power spectrum — this is the core of the design (see below)
+5. Sum the A-weighted power in each of the 6 frequency bands across all time frames
+6. The band holding the largest **share** of total A-weighted energy wins
+7. If the winner holds < 33 % → `6-mixed` (sound is spread across the spectrum; loops/pads)
 
-Spectral centroid was tried and rejected — brief transients skew it badly (a hi-hat click pulls the centroid into highmid even when the sustained shimmer is clearly high).
+**Why A-weighting (the key decision):** the old algorithm summed raw STFT power, but bass carries far more acoustic power than treble for equal *perceived* loudness (Fletcher–Munson). A snare's ~150 Hz body out-powered its bright 7 kHz crack and landed in `low`, contradicting what the ear hears. A-weighting (−30 dB @ 50 Hz, −14 dB @ 150 Hz, ≈flat 1–6 kHz) rebalances the spectrum to match hearing. A real kick still lands low — A-weighting only rebalances competing bands, it can't invent treble.
+
+**Two approaches deliberately rejected:**
+- *Spectral centroid* — brief transients skew it, and after A-weighting it pushes kicks/bass up into `mid` (fundamentals get suppressed). ~67/78 kicks misfiled in testing.
+- *Octave-width normalisation* (`energy / log2(hi/lo)`) — over-rewards narrow bands; a kick's faint click won the narrow `highmid` band. Removed entirely.
+
+The wide 4-octave `mid` (old 250–4000 Hz) was split at 1 kHz into `lowmid` + `mid` so neither half becomes a 50%+ catch-all.
 
 ## Key constants (`samplesam.py`)
 
 | Symbol            | Value  | Purpose                                            |
 |-------------------|--------|----------------------------------------------------|
-| `BANDS`           | list   | Defines all 5 bands: key, folder, prefix, lo/hi Hz |
+| `BANDS`           | list   | Defines all 6 bands: key, folder, prefix, lo/hi Hz |
 | `FOLDERS`         | dict   | `band_key → output folder name`                    |
 | `PREFIXES`        | dict   | `band_key → filename prefix`                       |
-| `MIXED_FOLDER`    | string | `"5-mixed"`                                        |
-| `MIXED_PREFIX`    | string | `"5_"`                                             |
-| `MIXED_THRESHOLD` | float  | `0.33` — minimum octave-normalised share to win    |
+| `MIXED_FOLDER`    | string | `"6-mixed"`                                        |
+| `MIXED_PREFIX`    | string | `"6_"`                                             |
+| `MIXED_THRESHOLD` | float  | `0.33` — minimum A-weighted energy share to win    |
 | `STATE_FILE`      | string | `"samplesam-state.json"` — DB filename in output   |
 | `MAX_RUN_ID`      | int    | `999` — first run_id; supports 1000 sessions       |
 

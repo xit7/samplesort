@@ -8,18 +8,23 @@ Sort WAV samples into folders by their dominant frequency band.
 |--------------|-------------------|------------------------------------------|
 | `0-sub/`     | 20 – 80 Hz        | sub bass, rumble                         |
 | `1-low/`     | 80 – 250 Hz       | bass, kick body                          |
-| `2-mid/`     | 250 – 4 000 Hz    | vocals, guitar, snare                    |
-| `3-highmid/` | 4 000 – 8 000 Hz  | bite, presence                           |
-| `4-high/`    | 8 000 – 20 000 Hz | air, cymbals                             |
-| `5-mixed/`   | —                 | broad-spectrum / no single dominant band |
+| `2-lowmid/`  | 250 – 1 000 Hz    | low body, toms, warmth                   |
+| `3-mid/`     | 1 000 – 4 000 Hz  | vocals, snare body, presence             |
+| `4-highmid/` | 4 000 – 6 000 Hz  | bite, hi-hats, sibilance                 |
+| `5-high/`    | 6 000 – 20 000 Hz | air, cymbals, shakers                    |
+| `6-mixed/`   | —                 | broad-spectrum / no single dominant band |
 
 Each copied file is prefixed with its band number: `kick.wav` → `1_kick.wav`.
 
-A file lands in `5-mixed` when no single band holds ≥ 50 % of the file's total spectral energy (typical for loops, pads, and full-frequency phrases).
+A file lands in `6-mixed` when no single band holds ≥ 33 % of the file's (loudness-weighted) energy — typical for loops, pads, and full-frequency phrases.
 
 ## How classification works
 
-The tool computes a full **STFT power spectrogram** for each file and sums the energy within each frequency band across every frame. The band with the highest total energy wins. This "dominant band over time" approach correctly handles short percussive samples where a brief transient would otherwise skew a centroid-based estimate.
+samplesam sorts each sample by **where you hear it sitting** in the spectrum, not by where it carries the most raw power — those differ. Bass carries far more acoustic power than treble for equal *perceived* loudness, so on a raw meter a snare's low "body" thump can outweigh its bright "crack" even though your ear clearly hears the snare as bright.
+
+To match your ears, the tool applies **A-weighting** — the same loudness curve used by sound-level meters — to the spectrum before measuring it. A-weighting turns the lows down a lot (≈ 30 dB at 50 Hz, ≈ 14 dB at 150 Hz) and leaves the 1–6 kHz region roughly as-is, mirroring human hearing. It then sums the A-weighted energy in each band (across the whole file, so brief transients don't dominate) and the band holding the largest **share** wins.
+
+A real kick still lands in `0-sub`/`1-low`: A-weighting only rebalances bands that actually compete — it can't invent treble that isn't there.
 
 ## Setup
 

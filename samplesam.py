@@ -4,7 +4,6 @@
 import argparse
 import hashlib
 import json
-import math
 import shutil
 import sys
 from datetime import datetime
@@ -18,19 +17,20 @@ import numpy as np
 BANDS = [
     ("sub",     "0-sub",     "0_",  20,     80),
     ("low",     "1-low",     "1_",  80,    250),
-    ("mid",     "2-mid",     "2_", 250,   4000),
-    ("highmid", "3-highmid", "3_", 4000,  8000),
-    ("high",    "4-high",    "4_", 8000, 20000),
+    ("lowmid",  "2-lowmid",  "2_", 250,   1000),  # split from the old 4-octave 'mid'
+    ("mid",     "3-mid",     "3_", 1000,  4000),  # so neither half is a catch-all
+    ("highmid", "4-highmid", "4_", 4000,  6000),
+    ("high",    "5-high",    "5_", 6000, 20000),
 ]
 
 FOLDERS  = {name: folder for name, folder, *_ in BANDS}    # key -> output subfolder name
 PREFIXES = {name: prefix for name, _, prefix, *_ in BANDS}  # key -> filename prefix
 
-MIXED_FOLDER    = "5-mixed"
-MIXED_PREFIX    = "5_"
-# A band wins only if it holds >= 33% of octave-normalised energy.
-# 33% sits just above the ~32% a perfectly flat broadband signal would score,
-# so genuine one-shots always win while loops/pads still fall through to mixed.
+MIXED_FOLDER    = "6-mixed"
+MIXED_PREFIX    = "6_"
+# A band wins only if it holds >= 33% of the A-weighted energy share.
+# Below that the sound is spread across the spectrum (loops, pads) -> mixed.
+# 0.33 keeps mixed small (~4%) while still catching genuinely broadband material.
 MIXED_THRESHOLD = 0.33
 
 STATE_FILE = "samplesam-state.json"  # created in the output folder
@@ -43,6 +43,19 @@ def collect_wavs(input_dir: Path) -> list[Path]:
     return sorted(p for p in input_dir.rglob("*") if p.is_file() and p.suffix.lower() == ".wav")
 
 
+def a_weighting_power(freqs: np.ndarray) -> np.ndarray:
+    """A-weighting gain for a POWER spectrum (squared IEC 61672 magnitude response)."""
+    # Bass carries far more raw power than treble for equal loudness, so raw power
+    # over-weights low bands. A-weighting mirrors the ear and corrects that bias.
+    f2 = freqs ** 2
+    ra = (12194.0 ** 2 * f2 ** 2) / (
+        (f2 + 20.6 ** 2)
+        * np.sqrt((f2 + 107.7 ** 2) * (f2 + 737.9 ** 2))
+        * (f2 + 12194.0 ** 2)
+    )
+    return ra ** 2  # R_A is an amplitude response; square it to weight power bins
+
+
 def dominant_band(path: Path) -> tuple[str, dict[str, float]]:
     """Return (bucket, {band: pct_energy}). bucket may be 'mixed'."""
     y, sr = librosa.load(str(path), mono=True, sr=None)  # mono mix, keep original sample rate
@@ -52,29 +65,26 @@ def dominant_band(path: Path) -> tuple[str, dict[str, float]]:
     power = np.abs(librosa.stft(y, n_fft=n_fft)) ** 2   # complex STFT -> real power (magnitude²)
     freqs = librosa.fft_frequencies(sr=sr, n_fft=n_fft)  # Hz value for each bin row
 
-    # Sum all power within each band's frequency range across every time frame
+    # Weight power by perceived loudness BEFORE summing — this is the whole fix.
+    # Without it a snare's 150 Hz body outweighs its 7 kHz crack and lands in 'low'.
+    power = power * a_weighting_power(freqs)[:, np.newaxis]  # broadcast gain over all frames
+
+    # Sum all weighted power within each band's frequency range across every time frame
     energies: dict[str, float] = {}
     for name, _, _, lo, hi in BANDS:
         mask = (freqs >= lo) & (freqs < hi)
         energies[name] = float(power[mask].sum())
 
     total = sum(energies.values()) or 1.0
-    pcts = {k: v / total * 100 for k, v in energies.items()}  # raw %, used for display only
+    pcts = {k: v / total * 100 for k, v in energies.items()}  # weighted % per band
 
-    # Normalise each band's energy by its octave width log2(hi/lo) before comparing.
-    # STFT bins are linearly spaced, so wider bands accumulate more bins and more raw
-    # energy even from flat-spectrum signals. Octave normalisation removes that bias:
-    # the mid band (4 oct) stops drowning out highmid (1 oct) on broadband sounds.
-    log_normed = {
-        name: energies[name] / math.log2(hi / lo)
-        for name, _, _, lo, hi in BANDS
-    }
-    normed_total = sum(log_normed.values()) or 1.0
-    normed_pcts = {k: v / normed_total for k, v in log_normed.items()}
+    # Classify on the loudness-weighted energy SHARE directly — the share already
+    # answers "where does the sound sit?". We deliberately do NOT normalise by band
+    # width: that over-rewards narrow bands (a kick's faint click would win 'highmid').
+    winner = max(pcts, key=pcts.__getitem__)
 
-    winner = max(normed_pcts, key=normed_pcts.__getitem__)
-
-    if normed_pcts[winner] < MIXED_THRESHOLD:
+    # If no band owns a clear majority the sound is spread across the spectrum -> mixed
+    if pcts[winner] < MIXED_THRESHOLD * 100:
         return "mixed", pcts
     return winner, pcts
 
